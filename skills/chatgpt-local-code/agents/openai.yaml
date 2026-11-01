@@ -1,0 +1,4 @@
+interface:
+  display_name: "ChatGPT Local Code"
+  short_description: "Read-only local code access for ChatGPT over MCP"
+  default_prompt: "Use $chatgpt-local-code to connect ChatGPT to a chosen local repository with read-only MCP tools and a fixed HTTPS tunnel."
