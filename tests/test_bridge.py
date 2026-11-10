@@ -24,6 +24,34 @@ class BridgeTests(unittest.TestCase):
             root.mkdir()
             self.assertEqual(bridge.validate_root(root, Path(d) / 'state'), root.resolve())
 
+    def test_reject_home_and_runtime_as_root(self):
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d).resolve()
+            state = home / 'state'
+            state.mkdir()
+            with patch.object(bridge.Path, 'home', return_value=home):
+                for root, private_state in ((home, home.parent / 'external-state'), (state, state)):
+                    with self.assertRaises(ValueError):
+                        bridge.validate_root(root, private_state)
+
+    def test_reconfigure_requires_removing_stale_launch_agents(self):
+        with tempfile.TemporaryDirectory() as d:
+            state = Path(d)
+            (state / 'installed.json').write_text(json.dumps({'policy': bridge.RUNTIME_POLICY}))
+            stale_job = state / 'old.plist'
+            stale_job.touch()
+            args = bridge.argparse.Namespace(confirm_public_access=True)
+            with patch.object(bridge.sys, 'platform', 'darwin'), patch.object(bridge, 'job_paths', return_value=[stale_job]):
+                with self.assertRaisesRegex(ValueError, 'disable-autostart'):
+                    bridge.configure(args, state)
+
+    def test_old_runtime_requires_upgrade(self):
+        with tempfile.TemporaryDirectory() as d:
+            state = Path(d)
+            (state / 'installed.json').write_text(json.dumps({'revision': bridge.REVISION}))
+            with self.assertRaisesRegex(ValueError, 'upgrade instructions'):
+                bridge.require_current_runtime(state)
+
     def test_reject_symlink_root_containing_state(self):
         with tempfile.TemporaryDirectory() as d:
             base = Path(d)

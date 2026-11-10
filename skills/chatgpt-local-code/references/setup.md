@@ -4,7 +4,7 @@
 
 Python 3.9+, Node.js 22+, npm, Git, an independently installed ngrok CLI, ngrok's free dev domain, and a ChatGPT account/workspace that can add custom MCP servers. A ChatGPT inference API key is not used by this route. Review third-party CodexPro code before running it with your user permissions.
 
-The helper's default state is `~/.local/share/chatgpt-local-code`, outside the allowed source root. Each deployment supports one explicitly selected root. Do not select the home directory or `/`: these contain the required private state, so the helper rejects them. It does not edit the already-running custom Murphy installation.
+The helper's default state is `~/.local/share/chatgpt-local-code`, separate from the source directory. Each deployment supports one project. The helper rejects your home directory and its ancestors. Only select a directory whose readable contents you are authorized to transmit to ngrok and ChatGPT. Do not rely on `.gitignore` or filename filters to protect private data.
 
 ```sh
 python3 scripts/bridge.py install
@@ -15,7 +15,7 @@ python3 scripts/bridge.py configure --root /absolute/path/to/repo \
 
 `configure` asks for the ngrok authtoken using hidden input. Browser login alone does not authenticate the CLI. Reconfiguration preserves the MCP token. Public domain changes require updating the ChatGPT connector URL. Do not commit the state directory. The helper explicitly fixes writes/bash/transcript access off; there is no flag that grants them.
 
-`install` checks out CodexPro `113472c6ff0a1516b6f223a43cd355abdf2e61ae` (0.30.3), uses the bundled dependency snapshot, makes the Zod 4 `z.record` signature adjustment, builds, audits production dependencies, and runs all upstream smoke groups. This is a local adaptation, not an upstream release or a general security certification. Package versions in the lock were tested on 2026-11-01. Reassess before deployment; newly disclosed vulnerabilities should block public startup until reviewed, patched and retested. Do not replace an existing runtime in place without preserving its state and obtaining scope approval.
+`install` checks out CodexPro `113472c6ff0a1516b6f223a43cd355abdf2e61ae` (0.30.3), uses the bundled dependency snapshot, applies a Zod compatibility patch and the three-tool allowlist, builds, audits production dependencies, and runs upstream smoke tests. This is a local adaptation. Reassess newly disclosed dependency risks before public startup.
 
 ## Test and run
 
@@ -30,7 +30,7 @@ python3 scripts/bridge.py verify --public
 python3 scripts/bridge.py status
 ```
 
-The verifier creates one random harmless fixture directory inside the selected root and removes it in `finally`. It tests file reads, denied writes, secret patterns, parent/symlink escapes, authentication, disabled tools and blocked public management routes. Do not run if creating/removing that fixture is outside the authorized scope. The fixture is fake content, not a real credential. `--public` sends this fake fixture over ngrok.
+The verifier creates a temporary fixture inside the selected root and removes it when done. It checks that the server exposes exactly `tree`, `search`, and `read`, verifies allowed and blocked paths, and checks authentication and the management route. Do not run if creating/removing the fixture is outside the authorized scope. `--public` sends the sample via ngrok.
 
 The HTTPS credential-bearing address is in `<state>/connector-url.txt`, mode 0600. Put the whole URL into the custom MCP server form; choose No authentication for this query-token compatibility route. The public domain alone, without token, must return 401. Select the installed plugin using `@` and ask for a shallow listing. Never publish the full URL or real screenshots containing tokens.
 
@@ -41,6 +41,12 @@ python3 scripts/bridge.py disable-autostart  # unload and remove only this deplo
 ```
 
 Login-time start requires a logged-in user, available home/project paths and internet. Sleep/offline makes it unreachable. Stop is not permanent disable. The domain is account-bound, not a domain you independently own; free quotas/terms can change.
+
+## Upgrades and reconfiguration
+
+To upgrade an older installation, use the updated helper's `disable-autostart` with the old state directory and stop any old foreground server. Install into a new private directory using `--state /absolute/path/to/new-state` **before** the subcommand. Use that same option for every command for this installation. Configure, verify, and replace the connector URL in ChatGPT; the new installation creates a new MCP token. Keep the old state private until you no longer need it.
+
+To change an existing deployment's directory, domain, or ports, stop any foreground server and run `disable-autostart` first. Run `configure` and verify locally. If still wanted, run `enable-autostart` to generate jobs with the new settings, then `verify --public`. `stop` alone leaves the old job files in place.
 
 ## Failures worth distinguishing
 

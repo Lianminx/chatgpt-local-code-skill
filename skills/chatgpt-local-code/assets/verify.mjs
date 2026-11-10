@@ -14,26 +14,36 @@ const endpoint=new URL('/mcp',base);endpoint.searchParams.set('codexpro_token',t
 const fixture=fs.mkdtempSync(path.join(c.root,'.mcp-readonly-check-'));
 const outside=fs.mkdtempSync(path.join(os.tmpdir(),'mcp-outside-'));
 const relative=path.relative(c.root,fixture).split(path.sep).join('/');
-fs.writeFileSync(path.join(fixture,'safe.txt'),'harmless MCP verification fixture\n');
-fs.writeFileSync(path.join(fixture,'.env'),'FAKE_SECRET=not-a-real-secret\n');
-fs.writeFileSync(path.join(outside,'outside.txt'),'fake outside-root fixture\n');
-fs.symlinkSync(path.join(outside,'outside.txt'),path.join(fixture,'escape.txt'));
 const client=new Client({name:'chatgpt-local-code-check',version:'1.0.0'});
 try{
+  const allowed='harmless MCP verification fixture';
+  const excluded='excluded MCP verification fixture';
+  fs.writeFileSync(path.join(fixture,'safe.txt'),allowed+'\n');
+  fs.writeFileSync(path.join(fixture,'.env'),excluded+'\n');
+  fs.writeFileSync(path.join(fixture,'CREDENTIALS.JSON'),excluded+'\n');
+  fs.mkdirSync(path.join(fixture,'.ai-bridge'));
+  fs.writeFileSync(path.join(fixture,'.ai-bridge','notes.txt'),excluded+'\n');
+  fs.writeFileSync(path.join(outside,'outside.txt'),excluded+'\n');
+  fs.symlinkSync(path.join(outside,'outside.txt'),path.join(fixture,'escape.txt'));
   await client.connect(new StreamableHTTPClientTransport(endpoint));
   const tools=(await client.listTools()).tools;
-  assert(tools.length>0 && tools.every(t=>t.annotations?.readOnlyHint===true));
-  for(const name of ['write','edit','apply_patch','import_file','bash','handoff_to_agent','export_pro_context','codexpro_self_test'])assert(!tools.some(t=>t.name===name));
+  assert.deepEqual(tools.map(t=>t.name).sort(),['read','search','tree']);
+  assert(tools.every(t=>t.annotations?.readOnlyHint===true));
   const read=await client.callTool({name:'read',arguments:{path:`${relative}/safe.txt`}});
-  assert(!read.isError && JSON.stringify(read).includes('harmless MCP verification fixture'));
-  for(const target of [`${relative}/.env`,`${relative}/escape.txt`,path.join(outside,'outside.txt'),'../outside.txt']){
+  assert(!read.isError && JSON.stringify(read).includes(allowed));
+  for(const target of [`${relative}/.env`,`${relative}/CREDENTIALS.JSON`,`${relative}/.ai-bridge/notes.txt`,`${relative}/escape.txt`,path.join(outside,'outside.txt'),'../outside.txt']){
     assert((await client.callTool({name:'read',arguments:{path:target}})).isError,`Not blocked: ${target}`);
   }
+  const tree=await client.callTool({name:'tree',arguments:{path:relative,include_hidden:true}});
+  assert(!tree.isError && JSON.stringify(tree).includes('safe.txt'));
+  assert(!/\.env|CREDENTIALS\.JSON|\.ai-bridge/.test(JSON.stringify(tree)));
+  const search=await client.callTool({name:'search',arguments:{path:relative,query:'MCP verification fixture',include_hidden:true}});
+  assert(!search.isError && JSON.stringify(search).includes(allowed) && !JSON.stringify(search).includes(excluded));
   const write=await client.callTool({name:'write',arguments:{path:`${relative}/new.txt`,content:'must not be written'}}).catch(()=>({isError:true}));
   assert(write.isError);assert(!fs.existsSync(path.join(fixture,'new.txt')));
   assert.equal((await fetch(new URL('/mcp',base),{signal:AbortSignal.timeout(20000)})).status,401);
   assert.equal((await fetch(new URL('/admin/profile',base),{signal:AbortSignal.timeout(20000)})).status,404);
-  console.log(JSON.stringify({passed:true,transport:base,tools:tools.map(t=>t.name),checks:['fake fixture read','all tools read-only','write rejected','sensitive path denied','root and symlink escape denied','unauthenticated 401','public management 404']},null,2));
+  console.log(JSON.stringify({passed:true,transport:base,tools:tools.map(t=>t.name),checks:['exact tool allowlist','write rejected','fixture read, tree and search','sensitive path denied','root and symlink escape denied','unauthenticated 401','public management 404']},null,2));
 }finally{
   await client.close().catch(()=>{});
   fs.rmSync(fixture,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});

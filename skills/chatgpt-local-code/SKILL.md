@@ -9,15 +9,15 @@ Use the existing setup when present; do not replace working services or rotate t
 
 ## Agree on the boundary
 
-Identify the real directory the user wants exposed, the destination (ChatGPT via ngrok), and whether automatic login-time startup is wanted. Prefer one repository; a larger explicitly authorized workspace is allowed. Reading through MCP transmits code to cloud services. Pattern filters do not discover every secret; the server is not an OS sandbox. Never promise offline execution or zero provider-side retention.
+Identify the specific project directory the user authorizes, the destination (ChatGPT via ngrok), and whether login-time startup is wanted. Never select a home directory or its parents. Confirm the project can be sent to both services. Pattern filters and `.gitignore` do not establish a confidentiality boundary; use an isolated sample project for the first test.
 
 Keep the runtime, ngrok configuration, access token, credential-bearing connector URL and logs outside all allowed roots. Do not read browser profiles or cookies. The user logs in to official ChatGPT/ngrok themselves. Ask them to enter ngrok's existing authtoken into the helper's hidden prompt, never into chat, command arguments or a checked-in file. Never rotate or create credentials unless separately requested.
 
 ## Prepare and connect
 
-Read [setup.md](references/setup.md) for commands, dependency pinning, expected checks and failure handling. Use `scripts/bridge.py --help`; all paths are configurable. The helper installs a pinned upstream revision with a tested dependency lock and one Zod compatibility change, rather than silently installing latest upstream code. Inspect the audit result before any public startup. Do not use `npm audit fix --force` as an unattended repair.
+Read [setup.md](references/setup.md) for commands, upgrades, checks and failure handling. The helper uses a pinned upstream revision with a locked dependency set. Inspect the audit result before public startup. Do not use `npm audit fix --force` as an unattended repair.
 
-Configure only with explicit authorization of the directory and public tunnel. The helper exposes no writes, shell tool, handoff/export or Codex transcripts. It forwards only `/mcp`, retains token authentication and keeps ngrok inspection disabled. Neither `readOnlyHint` nor tool descriptions are the actual security boundary: verify the configured server modes and registered tools.
+Configure only with explicit authorization of the directory and public tunnel. The helper forwards only `/mcp` and exposes exactly `tree`, `search`, and `read`. Verify that exact tool list; `readOnlyHint` alone does not enforce scope. Updating the Skill files does not upgrade an already running server.
 
 Complete local verification before public verification. Never submit actual private code merely for a connectivity test: use a harmless fixture explicitly created for that purpose. The connector URL file contains a bearer-equivalent secret; show its private local path instead of printing it in chat. In ChatGPT the query-token compatibility route uses “No authentication” in the UI but the MCP server still checks the token. Prefer supported OAuth/header authentication for multi-user deployments; this helper is a single-user setup.
 

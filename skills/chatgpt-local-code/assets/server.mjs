@@ -5,20 +5,21 @@ import path from 'node:path';
 const state=path.resolve(process.argv[2]);
 const c=JSON.parse(fs.readFileSync(path.join(state,'settings.json'),'utf8'));
 const token=fs.readFileSync(path.join(state,'mcp-token'),'utf8').trim();
+if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Invalid MCP token file.');
 const child=spawn(process.execPath,['dist/http.js'],{
   cwd:path.join(state,'runtime'),
   env:{PATH:process.env.PATH,HOME:process.env.HOME,
-    CODEXPRO_HOME:path.join(state,'profile'),CODEXPRO_ROOT:c.root,CODEXPRO_ALLOWED_ROOTS:c.root,
+    CODEXPRO_HOME:path.join(state,'profile'),CODEXPRO_ROOT:c.root,
     CODEXPRO_HOST:'127.0.0.1',CODEXPRO_PORT:String(c.port),CODEXPRO_HTTP_TOKEN:token,
     CODEXPRO_REQUIRE_HTTP_TOKEN:'1',CODEXPRO_BASH_MODE:'off',CODEXPRO_WRITE_MODE:'off',
     CODEXPRO_CODEX_SESSIONS:'off',CODEXPRO_TOOL_MODE:'standard',CODEXPRO_CONNECTION_TEST:'1',
-    CODEXPRO_BLOCKED_GLOBS:'**/auth.json,**/credentials.json,**/.npmrc,**/.pypirc,**/.netrc,**/.aws/**,**/.azure/**,**/.config/gcloud/**,**/*.p12,**/*.pfx,**/*.keystore'},
+    CODEXPRO_LOCAL_CODE_ONLY:'1',CODEXPRO_ANALYSIS:'0',CODEXPRO_TOOL_CARDS:'0',
+    CODEXPRO_BLOCKED_GLOBS:'**/.git,**/.ai-bridge,**/.ai-bridge/**,**/auth.json,**/credentials.json,**/.npmrc,**/.pypirc,**/.netrc,**/.aws/**,**/.azure/**,**/.config/gcloud/**,**/*.p12,**/*.pfx,**/*.keystore'},
   stdio:['ignore','inherit','inherit']
 });
 // Keep administrative routes off the public listener; authentication stays upstream.
 const gateway=http.createServer((req,res)=>{
-  let url;try{url=new URL(req.url,'http://localhost');}catch{res.writeHead(400).end();return;}
-  if(url.pathname!=='/mcp'){res.writeHead(404).end();return;}
+  if(req.url.split('?',1)[0]!=='/mcp'){res.writeHead(404).end();return;}
   const out=http.request({hostname:'127.0.0.1',port:c.port,path:req.url,method:req.method,headers:req.headers},reply=>{
     res.writeHead(reply.statusCode,reply.headers);reply.pipe(res);
   });
