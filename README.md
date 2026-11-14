@@ -1,4 +1,4 @@
-# ChatGPT Local Code Skill
+# ChatGPT Local Bridge
 
 让 ChatGPT 网页版通过 **CodexPro + MCP + ngrok 固定地址**读取你明确允许的本地代码。连接器只提供目录浏览、文本搜索和文本读取三个工具。
 
@@ -9,9 +9,9 @@
 从仓库或解压后的安装包中，将 `skills/chatgpt-local-code` 复制到你的 Agent 支持的 Skill 目录。Codex 的常见用户目录是 `~/.codex/skills/`；如果设置了 `CODEX_HOME`，使用对应目录。不要覆盖已有同名 Skill 而不先检查差异。
 
 ```sh
-git clone https://github.com/Lianminx/chatgpt-local-code-skill.git
+git clone https://github.com/Lianminx/chatgpt-local-bridge.git
 mkdir -p ~/.codex/skills
-cp -R chatgpt-local-code-skill/skills/chatgpt-local-code ~/.codex/skills/
+cp -R chatgpt-local-bridge/skills/chatgpt-local-code ~/.codex/skills/
 ```
 
 之后可以要求支持该格式的 Agent：
@@ -23,7 +23,7 @@ cp -R chatgpt-local-code-skill/skills/chatgpt-local-code ~/.codex/skills/
 首版支持 **macOS、Python 3.9+、Node.js 22+、Git、npm、独立安装的 ngrok CLI**。先登录官方 ChatGPT/ngrok，确认账号可以添加自定义 MCP 插件，取得 ngrok 分配的免费 dev domain。Skill 不附带 ngrok 二进制，也不自动升级套餐。
 
 ```sh
-cd chatgpt-local-code-skill/skills/chatgpt-local-code
+cd chatgpt-local-bridge/skills/chatgpt-local-code
 python3 scripts/bridge.py install
 python3 scripts/bridge.py configure \
   --root /absolute/path/to/repo \
